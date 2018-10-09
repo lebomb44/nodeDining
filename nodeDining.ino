@@ -27,11 +27,11 @@ const char tvShutterContactName[] PROGMEM = "tvShutterContact";
 const char lightRelayName[] PROGMEM = "lightRelay";
 const char tempSensorsName[] PROGMEM = "tempSensors";
 
-ShutterButton windowShutterButton(windowShutterButtonName, A3, A2);
+ShutterButton windowShutterButton(windowShutterButtonName, A2, A3);
 Contact windowWindowContact(windowWindowContactName, A1);
 Contact windowShutterContact(windowShutterContactName, A0);
 
-ShutterButton doorShutterButton(doorShutterButtonName, 8, 7);
+ShutterButton doorShutterButton(doorShutterButtonName, 7, 8);
 Relay doorShutterUpRelay(doorShutterUpRelayName, 6);
 Relay doorShutterDownRelay(doorShutterDownRelayName, 5);
 Contact doorWindowContact(doorWindowContactName, A5);
@@ -50,13 +50,12 @@ DallasTemperature tempSensors(&oneWire);
 
 static uint32_t loopNb = 0;
 
-void ping_cmdGet(int arg_cnt, char **args) { cnc_print_cmdGet(pingName, loopNb); }
+void ping_cmdGet(int arg_cnt, char **args) { cnc_print_cmdGet_u32(pingName, loopNb); }
 void windowShutterButton_cmdGet(int arg_cnt, char **args) { windowShutterButton.cmdGet(arg_cnt, args); }
 void windowWindowContact_cmdGet(int arg_cnt, char **args) { windowWindowContact.cmdGet(arg_cnt, args); }
 void windowShutterContact_cmdGet(int arg_cnt, char **args) { windowShutterContact.cmdGet(arg_cnt, args); }
 void doorWindowContact_cmdGet(int arg_cnt, char **args) { doorWindowContact.cmdGet(arg_cnt, args); }
 void doorShutterContact_cmdGet(int arg_cnt, char **args) { doorShutterContact.cmdGet(arg_cnt, args); }
-void tvWindowContact_cmdGet(int arg_cnt, char **args) { tvWindowContact.cmdGet(arg_cnt, args); }
 void tvShutterContact_cmdGet(int arg_cnt, char **args) { tvShutterContact.cmdGet(arg_cnt, args); }
 void lightRelay_cmdGet(int arg_cnt, char **args) { lightRelay.cmdGet(arg_cnt, args); }
 void lightRelay_cmdSet(int arg_cnt, char **args) { lightRelay.cmdSet(arg_cnt, args); }
@@ -76,7 +75,6 @@ void setup() {
   cnc_cmdGet_Add(windowShutterContactName, windowShutterContact_cmdGet);
   cnc_cmdGet_Add(doorWindowContactName   , doorWindowContact_cmdGet);
   cnc_cmdGet_Add(doorShutterContactName  , doorShutterContact_cmdGet);
-  cnc_cmdGet_Add(tvWindowContactName     , tvWindowContact_cmdGet);
   cnc_cmdGet_Add(tvShutterContactName    , tvShutterContact_cmdGet);
   cnc_cmdGet_Add(lightRelayName, lightRelay_cmdGet);
   cnc_cmdSet_Add(lightRelayName, lightRelay_cmdSet);
@@ -97,15 +95,15 @@ void loop() {
     windowShutterContact.run(true);
     doorWindowContact.run(true);
     doorShutterContact.run(true);
-    tvWindowContact.run(true);
     tvShutterContact.run(true);
     tempSensorsNb = tempSensors.getDeviceCount();
     tempSensors.requestTemperatures();
     for(uint8_t i=0; i<tempSensorsNb; i++)  {
-      cnc_print_hk_index(tempSensorsName, i, tempSensors.getTempCByIndex(i));
+      cnc_print_hk_index_float(tempSensorsName, i, tempSensors.getTempCByIndex(i));
     }
   }
   cncPoll();
   loopNb++;
+  if(1000000000 <= loopNb) { loopNb = 0; }
 }
 
