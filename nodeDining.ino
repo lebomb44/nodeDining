@@ -48,9 +48,11 @@ Relay lightRelay(lightRelayName, 13);
 OneWire oneWire(2);
 DallasTemperature tempSensors(&oneWire);
 
-static uint32_t loopNb = 0;
+uint32_t previousTime_Contact = 0;
+uint32_t previousTime_Temp = 0;
+uint32_t currentTime = 0;
 
-void ping_cmdGet(int arg_cnt, char **args) { cnc_print_cmdGet_u32(pingName, loopNb); }
+void ping_cmdGet(int arg_cnt, char **args) { cnc_print_cmdGet_u32(pingName, currentTime); }
 void windowShutterButton_cmdGet(int arg_cnt, char **args) { windowShutterButton.cmdGet(arg_cnt, args); }
 void windowWindowContact_cmdGet(int arg_cnt, char **args) { windowWindowContact.cmdGet(arg_cnt, args); }
 void windowShutterContact_cmdGet(int arg_cnt, char **args) { windowShutterContact.cmdGet(arg_cnt, args); }
@@ -63,7 +65,6 @@ uint8_t tempSensorsNb = 0;
 
 void setup() {
   Serial.begin(115200);
-  tempSensors.begin();
   cncInit(nodeName);
   cnc_hkName_set(hkName);
   cnc_cmdGetName_set(cmdGetName);
@@ -82,28 +83,35 @@ void setup() {
   doorShutterDownRelay.open();
   tvShutterUpRelay.open();
   tvShutterDownRelay.open();
+  previousTime_Contact = millis();
+  previousTime_Temp = millis();
 }
 
 void loop() {
-  delay(1);
-  windowShutterButton.run(false);
-  lightRelay.run(false);
+  windowShutterButton.run(false); cncPoll();
+  lightRelay.run(false); cncPoll();
 
-  /* HK @ 1Hz */
-  if(0 == loopNb%1000) {
-    windowWindowContact.run(true);
-    windowShutterContact.run(true);
-    doorWindowContact.run(true);
-    doorShutterContact.run(true);
-    tvShutterContact.run(true);
-    tempSensorsNb = tempSensors.getDeviceCount();
-    tempSensors.requestTemperatures();
+  /* Contact HK @ 1.0Hz */
+  currentTime = millis(); cncPoll();
+  if((uint32_t)(currentTime - previousTime_Contact) >= 1000) {
+    windowWindowContact.run(true); cncPoll();
+    windowShutterContact.run(true); cncPoll();
+    doorWindowContact.run(true); cncPoll();
+    doorShutterContact.run(true); cncPoll();
+    tvShutterContact.run(true); cncPoll();
+    previousTime_Contact = currentTime;
+  }
+  /* Temperature HK @ 0.01Hz */
+  if((uint32_t)(currentTime - previousTime_Temp) >= 100000) {
+    tempSensors.begin(); cncPoll();
+    tempSensorsNb = tempSensors.getDeviceCount(); cncPoll();
+    tempSensors.requestTemperatures(); cncPoll();
     for(uint8_t i=0; i<tempSensorsNb; i++)  {
-      cnc_print_hk_index_float(tempSensorsName, i, tempSensors.getTempCByIndex(i));
+      DeviceAddress sensorAddr;
+      tempSensors.getAddress(sensorAddr, i); cncPoll();
+      cnc_print_hk_temp_sensor(tempSensorsName, sensorAddr, tempSensors.getTempCByIndex(i)); cncPoll();
     }
+    previousTime_Temp = currentTime;
   }
   cncPoll();
-  loopNb++;
-  if(1000000000 <= loopNb) { loopNb = 0; }
 }
-
